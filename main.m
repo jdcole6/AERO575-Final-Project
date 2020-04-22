@@ -7,7 +7,7 @@ clc; clear;
 
 %% Initialize Variables
 
-global a e omega w v i eta P c mu
+global a e omega w v i mu eta c 
 
 a = 1000;
 e = 0.8;
@@ -15,17 +15,29 @@ omega = 15;
 w = 30;
 v = 30;
 i = 5;
-eta = 0.90;
-P = 20;
-c = 9.8*100;
+g0 = 9.81;
 mu = 3.98e16;
 
 alpha0 = 0;
 beta0 = 0;
 
+% Direct Earth-Mars
+m0 = 1200; % kg
+P0 = 6.5e3; % W drops at (1/r^2)
+Isp = 3100; % s
+eta = 0.65;
+c = g0*Isp;
+
+% Launch Date = Jan 1 2009
+% Transfer Time = 1.5 years
+transfer_time = 1.5*365*24*60*60;
+
 %% Main
 
+beta = [alpha beta];
+phi = [lambda(t0) beta];
 
+J = phi;
 
 %% Functions
 
