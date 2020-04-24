@@ -1,0 +1,88 @@
+clear all
+clc
+syms p(t) f(t) g(t) h(t) k(t) L(t) M
+q = [p f g h k L]
+ww = 1 + f*cos(L) + g*sin(L);
+s2 = 1 + h^2 + k^2;
+mu = 3.98e16;
+% M = [ 0,                 ((2*p)/ww)*sqrt(p/mu),               0;
+%       sqrt(p/mu)*sin(L), sqrt(p/mu)*((ww + 1)*cos(L) + f)/ww, -sqrt(p/mu)*(h*sin(L) - k*cos(L))*g/ww;
+%      -sqrt(p/mu)*cos(L), sqrt(p/mu)*((ww + 1)*sin(L) + g)/ww,  sqrt(p/mu)*(h*sin(L) - k*cos(L))*f/ww; 
+%       0,                 0,                                  sqrt(p/mu)*s2/(2*ww)*cos(L);
+%       0,                 0,                                  sqrt(p/mu)*s2/(2*ww)*sin(L);
+%       0,                 0,                                  sqrt(p/mu)*(h*sin(L) - k*cos(L))/ww];
+%D = [0 0 0 0 0 sqrt(mu*p)*(w/p)^2]'
+D(1) = 0;
+D(2) = 0;
+D(3) = 0;
+D(4) = 0;
+D(5) = 0;
+D(6) = (mu*p)^.5 * (ww/p)^2;
+M(1,1)= 0;
+M(1,2)= (2*p/ww)*(p/mu)^.5;
+M(1,3)= 0;
+M(2,1)= (p/mu)^(.5)*sin(L);
+M(2,2)= (p/mu)^(.5)*((ww + 1)*cos(L) + f)/ww;
+M(2,3)= -(p/mu)^(.5)*(h*sin(L) - k*cos(L))*g/ww;
+M(3,1)= -(p/mu)^(.5)*cos(L);
+M(3,2)= (p/mu)^(.5)*((ww + 1)*sin(L) + g)/ww;
+M(3,3)= (p/mu)^(.5)*(h*sin(L) - k*cos(L))*f/ww;
+M(4,1)= 0;
+M(4,2)= 0;
+M(4,3)= (p/mu)^(.5)*s2/(2*ww)*cos(L);
+M(5,1)= 0;
+M(5,2)= 0;
+M(5,3)= (p/mu)^(.5)*s2/(2*ww)*sin(L);
+M(6,1)= 0;
+M(6,2)= 0;
+M(6,3)= (p/mu)^(.5)*(h*sin(L) - k*cos(L))/ww;
+for k1 = 1:size(M,1)
+    for k2 = 1:size(M,2)
+        dM_dq{k1,k2} = functionalDerivative(M(k1,k2),[p,f,g,h,k,L]);
+    end
+end
+for i1 = 1:size(D,1)
+        dM_dq{i1} = functionalDerivative(D(i1),[p,f,g,h,k,L]);
+end
+%establish Variable values
+a = 1000;
+e = 0.8;
+omega = 15;
+w = 30;
+v = 30;
+i = 5;
+g0 = 9.81;
+mu = 3.98e16;
+m0 = 1200; % kg
+P0 = 6.5e3; % W drops at (1/r^2)
+Isp = 3100; % s
+eta = 0.65;
+c = g0*Isp;
+p = a*(1 - e^2);
+f = e*cos(w + omega);
+g = e*sin(w + omega);
+h = tan(i/2)*cos(omega);
+k = tan(i/2)*sin(omega);
+L = omega + w + v;
+x = [p;f;g;h;k;L];
+
+%convert symbolics to variable
+double(p);
+double(f);
+double(g);
+double(k);
+double(h);
+double(L);
+s2 = subs(s2);
+ww = subs(ww);
+q = subs(q);
+%convert Partial differential matrix into numeric and discretize into
+%components
+DMDQ = double(subs(cell2sym(dM_dq)));
+dMdp = DMDQ(1:6:end,:);
+dMdf = DMDQ(2:6:end,:);
+dMdg = DMDQ(3:6:end,:);
+dMdh = DMDQ(4:6:end,:);
+dMdk = DMDQ(5:6:end,:);
+dMdL = DMDQ(6:6:end,:);
+
