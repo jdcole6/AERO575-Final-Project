@@ -32,19 +32,19 @@ c = g0*Isp;
 % Transfer Time = 1.5 years
 transfer_time = 1.5*365*24*60*60;
 
-%     JDTDB    Julian Day Number, Barycentric Dynamical Time
-%       EC     Eccentricity, e                                                   
-%       QR     Periapsis distance, q (km)                                        
-%       IN     Inclination w.r.t XY-plane, i (degrees)                           
-%       OM     Longitude of Ascending Node, OMEGA, (degrees)                     
-%       W      Argument of Perifocus, w (degrees)                                
-%       Tp     Time of periapsis (Julian Day Number)                             
-%       N      Mean motion, n (degrees/sec)                                      
-%       MA     Mean anomaly, M (degrees)                                         
-%       TA     True anomaly, nu (degrees)                                        
-%       A      Semi-major axis, a (km)                                           
-%       AD     Apoapsis distance (km)                                            
-%       PR     Sidereal orbit period (sec)   
+%      JDTDB    Julian Day Number, Barycentric Dynamical Time
+% 1      EC     Eccentricity, e                                                   
+% 2      QR     Periapsis distance, q (km)                                        
+% 3      IN     Inclination w.r.t XY-plane, i (degrees)                           
+% 4      OM     Longitude of Ascending Node, OMEGA, (degrees)                     
+% 5      W      Argument of Perifocus, w (degrees)                                
+% 6      Tp     Time of periapsis (Julian Day Number)                             
+% 7      N      Mean motion, n (degrees/sec)                                      
+% 8      MA     Mean anomaly, M (degrees)                                         
+% 9      TA     True anomaly, nu (degrees)                                        
+% 10     A      Semi-major axis, a (km)                                           
+% 11     AD     Apoapsis distance (km)                                            
+% 12     PR     Sidereal orbit period (sec)   
 
 earth = fopen('earth_ephemeris.txt');
 earth_mat = textscan(earth, '%f %s %f %f %f %f %f %f %f %f %f %f %f %f', ...
@@ -54,12 +54,30 @@ mars = fopen('mars_ephemeris.txt');
 mars_mat = textscan(mars, '%f %s %f %f %f %f %f %f %f %f %f %f %f %f', ...
     'delimiter', ',', 'CollectOutput', true);
 
+e_earth = earth_mat{1,3}(:,1);
+i_earth = earth_mat{1,3}(:,3);
+omega_earth = earth_mat{1,3}(:,4);
+w_earth = earth_mat{1,3}(:,5);
+v_earth = earth_mat{1,3}(:,9);
+a_earth = earth_mat{1,3}(:,10);
+
+e_mars = mars_mat{1,3}(:,1);
+i_mars = mars_mat{1,3}(:,3);
+omega_mars = mars_mat{1,3}(:,4);
+w_mars = mars_mat{1,3}(:,5);
+v_mars = mars_mat{1,3}(:,9);
+a_mars = mars_mat{1,3}(:,10);
+
 %% Main
 
 beta = [alpha beta];
 phi = [lambda(t0) beta];
 
 J = phi;
+
+%% Plotting
+
+x = a_earth;
 
 %% Functions
 
@@ -77,7 +95,7 @@ f(4) = h - tan(i/2)*cos(omega);
 f(5) = k - tan(i/2)*sin(omega);
 f(6) = L - omega + w + v;
 f(7) = T - (2*eta*P)/c;
-f(8) = w - 1 + f*cos(L) + g*sin(L);
+f(8) = ww - 1 + f*cos(L) + g*sin(L);
 f(9) = s - sqrt(1 + h^2 + k^2);
 
 end
@@ -86,21 +104,23 @@ function [xdot, mdot] = sys(t,x)
 
 global mu
 
-
-
 alpha_vec = [sin(alpha)*cos(beta) cos(alpha)*cos(beta) sin(beta)]';
 
-M = [ 0                 ((2*p)/w)*sqrt(p/mu)               0;
-      sqrt(p/mu)*sin(L) sqrt(p/mu)*((w + 1)*cos(L) + f)/w -sqrt(p/mu)*(h*sin(L) - k*cos(L))*g/w;
-     -sqrt(p/mu)*cos(L) sqrt(p/mu)*((w + 1)*sin(L) + g)/w  sqrt(p/mu)*(h*sin(L) - k*cos(L))*f/w; 
-      0                 0                                  sqrt(p/mu)*s^2/(2*w)*cos(L);
-      0                 0                                  sqrt(p/mu)*s^2/(2*w)*sin(L);
-      0                 0                                  sqrt(p/mu)*(h*sin(L) - k*cos(L))/w];
-  
-D = [0 0 0 0 0 sqrt(mu*p)*(w/p)^2]';
+% M = [ 0                 ((2*p)/ww)*sqrt(p/mu)                ;
+%       sqrt(p/mu)*sin(L) sqrt(p/mu)*((ww + 1)*cos(L) + f)/w  -sqrt(p/mu)*(h*sin(L) - k*cos(L))*g/ww;
+%      -sqrt(p/mu)*cos(L) sqrt(p/mu)*((ww + 1)*sin(L) + g)/w  sqrt(p/mu)*(h*sin(L) - k*cos(L))*f/ww; 
+%       0                 0                                   sqrt(p/mu)*s^2/(2*ww)*cos(L);
+%       0                 0                                   sqrt(p/mu)*s^2/(2*ww)*sin(L);
+%       0                 0                                   sqrt(p/mu)*(h*sin(L) - k*cos(L))/w];
+%   
+% D = [0 0 0 0 0 sqrt(mu*p)*(w/p)^2]';
+
+x = [1 1 1 1 1 1];
+[M,D,DM,DD] = MatSet(x)
 
 xdot = M*(T/m)*alpha_vec + D;
 mdot = -T/c;
+lam_
 lam_xdot = -(lam'*dMdx*(T/m)*alpha_vec + lam'*dDdx);
 lam_mdot = -norm(lam'*M)*(T/m^2);
 

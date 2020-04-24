@@ -1,7 +1,10 @@
-function [DM,DD] = MatSet(x)
+function [M,D,DM,DD] = MatSet(x)
+
 global mu
+
 syms p(t) f(t) g(t) h(t) k(t) L(t) M D
-q = [p f g h k L]
+
+q = [p f g h k L];
 ww = 1 + f*cos(L) + g*sin(L);
 s2 = 1 + h^2 + k^2;
 
@@ -37,6 +40,7 @@ M(5,3)= (p/mu)^(.5)*s2/(2*ww)*sin(L);
 M(6,1)= 0;
 M(6,2)= 0;
 M(6,3)= (p/mu)^(.5)*(h*sin(L) - k*cos(L))/ww;
+
 for k1 = 1:size(M,1)
     for k2 = 1:size(M,2)
         dM_dq{k1,k2} = functionalDerivative(M(k1,k2),[p,f,g,h,k,L]);
@@ -64,6 +68,7 @@ double(L);
 s2 = subs(s2);
 ww = subs(ww);
 q = subs(q);
+
 %convert Partial differential matrix into numeric and discretize into
 %components
 DMDQ = double(subs(cell2sym(dM_dq)));
@@ -82,6 +87,6 @@ dDdk = DDDQ(5:6:end);
 dDdL = DDDQ(6:6:end);
 
 % recompose derivative matrices
-DM = [dMdp;dMdf;dMdg;dMdh;dMdk;dMdL];
-DD = [dDdp;dDdf;dDdg;dDdh;dDdk;dDdL];
+DM = {dMdp;dMdf;dMdg;dMdh;dMdk;dMdL};
+DD = {dDdp;dDdf;dDdg;dDdh;dDdk;dDdL};
 end
