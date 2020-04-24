@@ -1,6 +1,6 @@
 clear all
 clc
-syms p(t) f(t) g(t) h(t) k(t) L(t) M
+syms p(t) f(t) g(t) h(t) k(t) L(t) M D
 q = [p f g h k L]
 ww = 1 + f*cos(L) + g*sin(L);
 s2 = 1 + h^2 + k^2;
@@ -41,16 +41,17 @@ for k1 = 1:size(M,1)
         dM_dq{k1,k2} = functionalDerivative(M(k1,k2),[p,f,g,h,k,L]);
     end
 end
-for i1 = 1:size(D,1)
-        dM_dq{i1} = functionalDerivative(D(i1),[p,f,g,h,k,L]);
+for kk = 1:6
+        dD_dq{kk} = functionalDerivative(D(kk),[p,f,g,h,k,L]);
 end
+
 %establish Variable values
 a = 1000;
 e = 0.8;
 omega = 15;
 w = 30;
 v = 30;
-i = 5;
+kk = 5;
 g0 = 9.81;
 mu = 3.98e16;
 m0 = 1200; % kg
@@ -61,8 +62,8 @@ c = g0*Isp;
 p = a*(1 - e^2);
 f = e*cos(w + omega);
 g = e*sin(w + omega);
-h = tan(i/2)*cos(omega);
-k = tan(i/2)*sin(omega);
+h = tan(kk/2)*cos(omega);
+k = tan(kk/2)*sin(omega);
 L = omega + w + v;
 x = [p;f;g;h;k;L];
 
@@ -79,10 +80,17 @@ q = subs(q);
 %convert Partial differential matrix into numeric and discretize into
 %components
 DMDQ = double(subs(cell2sym(dM_dq)));
+DDDQ = double(subs(cell2sym(dD_dq)));
 dMdp = DMDQ(1:6:end,:);
 dMdf = DMDQ(2:6:end,:);
 dMdg = DMDQ(3:6:end,:);
 dMdh = DMDQ(4:6:end,:);
 dMdk = DMDQ(5:6:end,:);
 dMdL = DMDQ(6:6:end,:);
+dDdp = DDDQ(1:6:end);
+dDdf = DDDQ(2:6:end);
+dDdg = DDDQ(3:6:end);
+dDdh = DDDQ(4:6:end);
+dDdk = DDDQ(5:6:end);
+dDdL = DDDQ(6:6:end);
 
