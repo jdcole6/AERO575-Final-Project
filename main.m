@@ -86,17 +86,16 @@ tf = 2;
 tspan = 1:ceil(tf);
 
 x_0 = [p_0;f_0;g_0;h_0;k_0;L_0;m_0];
-p_guess = [-1;0;0;0;0;0;0];
+lam_guess = [-1;0;0;0;0;0;0];
 
-p_0 = fsolve(@contraints, p_guess);
+% lam_0 = fsolve(@contraints, lam_guess);
 
-% options = optimoptions(@fmincon,'Algorithm','sqp');
-% Obj = @(x) -x(7);
-% lambda0 = [-1;0;0;0;0;0];
-% transfer = 1.5; %[years], transfer time guess
-% date = 09206; %25-Jul-2009, assuming we are using Julian dates
-% G = [lambda0;transfer;date]; %these are what I'm guessing are the SQP variables they are talking about
-% [costates] = fmincon(Obj,G,[],[],[],[],[],[],@Traj,options)
+options = optimoptions(@fmincon,'Algorithm','sqp');
+Obj = @(x) -x(7);
+transfer = 1.5; % [years], transfer time guess
+date = 09206; % 25-Jul-2009, assuming we are using Julian dates
+G = [lam_guess;transfer;date]; % these are what I'm guessing are the SQP variables they are talking about
+[lambda] = fmincon(Obj,G,[],[],[],[],[],[],@Traj,options);
 
 %% Plotting
 
@@ -134,29 +133,41 @@ axis square
 %% Functions
 
 function [c,ceq] = traj(X)
-global x0 m0 
-lm = 1; %mass costate
-l = [G(1:6);lm]; %costate vector
-tt = G(7)*365; %transfer time in [days]
-Start = G(8); %start date
-XX = [x0;m0;l;lm]; %initial state vector for integration
 
-[t, X] = ode45(@INT,[0 tt],XX) % calculate trajectory
-xx = X(end,:)
-tf = ciel(t(end));
-af = xx(1)/(1-xx(2)^2 - xx(3)^2);
-ef = sqrt(xx(2)^2 + xx(3)^2);
-iif = (180/pi())*(2*inv(tan(sqrt(xx(4)^2 + xx(5)^2))));
-wf = (180/pi())*(inv(tan(xx(3)/xx(2)))-inv(tan(xx(5)/xx(4))));
-omegaf = (180/pi())*inv(tan(xx(5),xx(4)));
-thetaf = (180/pi())*xx(6)-(omegaf+wf);
+global x_0 m_0 
 
-ceq(1) = af - a_mars(tf);
-ceq(2) = ef - e_mars(tf);
-ceq(3) = iif - i_mars(tf);
-ceq(4) = wf - w_mars(tf);
-ceq(5) = omegaf - omega_mars(tf);
-ceq(6) = thetaf - theta_mars(tf);
+lam_m = 0; % mass costate
+lam = [X(1:6);lm]; % costate vector
+tt = X(7)*365; % transfer time in [days]
+start = X(8); % start date
+XX = [x_0;m_0;lam]; % initial state vector for integration
+
+[X] = RungeKutta(@sys, XX); % calculate trajectory
+
+xx = X(end,:);
+tf = ceil(t(end));
+
+a_f = xx(1)/(1-xx(2)^2 - xx(3)^2);
+e_f = sqrt(xx(2)^2 + xx(3)^2);
+i_f = (180/pi())*(2*inv(tan(sqrt(xx(4)^2 + xx(5)^2))));
+w_f = (180/pi())*(inv(tan(xx(3)/xx(2)))-inv(tan(xx(5)/xx(4))));
+omega_f = (180/pi())*inv(tan(xx(5),xx(4)));
+theta_f = (180/pi())*xx(6)-(omega_f+w_f);
+
+c = [];
+
+ceq(1) = xx(1) - a*(1 - e^2);
+ceq(2) = xx(2) - e*cos(w + omega);
+ceq(3) = xx(3) - e*sin(w + omega);
+ceq(4) = xx(4) - tan(i/2)*cos(omega);
+ceq(5) = xx(5) - tan(i/2)*sin(omega);
+ceq(6) = xx(6) - omega + w + v;
+ceq(7) = a_f - a_mars(tf);
+ceq(8) = e_f - e_mars(tf);
+ceq(9) = i_f - i_mars(tf);
+ceq(10) = w_f - w_mars(tf);
+ceq(11) = omega_f - omega_mars(tf);
+ceq(12) = theta_f - theta_mars(tf);
 
 end
 
@@ -232,6 +243,8 @@ mdot = -T/c;
 % lam_kdot = -(lam'*dMdk*(T/m)*alpha_vec + lam'*dDdk);
 % lam_ldot = -(lam'*dMdL*(T/m)*alpha_vec + lam'*dDdL);
 
+lam_xdot = zeros(6,1);
+
 for i = 1:6
     lam_xdot(i) = -(lam'*DMDQ(i:6:end,:)*(T/m)*alpha_vec + lam'*DDDQ(i:6:end)');
 end
@@ -240,7 +253,7 @@ lam_mdot = -norm(lam'*M)*(T/m^2);
 
 % lam_xdot = [lam_pdot; lam_fdot; lam_gdot; lam_hdot; lam_kdot; lam_ldot];
 
-state_dot = [xdot;mdot;lam_xdot';lam_mdot];
+state_dot = [xdot;mdot;lam_xdot;lam_mdot];
 
 end
 
