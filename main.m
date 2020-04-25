@@ -5,7 +5,7 @@
 %%
 clc; clear;
 
-%% Initialize Variable
+%% Initialize Variables
 
 global AU m_0 P_0 eta c
 
@@ -90,6 +90,14 @@ p_guess = [-1;0;0;0;0;0;0];
 
 p_0 = fsolve(@contraints, p_guess);
 
+% options = optimoptions(@fmincon,'Algorithm','sqp');
+% Obj = @(x) -x(7);
+% lambda0 = [-1;0;0;0;0;0];
+% transfer = 1.5; %[years], transfer time guess
+% date = 09206; %25-Jul-2009, assuming we are using Julian dates
+% G = [lambda0;transfer;date]; %these are what I'm guessing are the SQP variables they are talking about
+% [costates] = fmincon(Obj,G,[],[],[],[],[],[],@Traj,options)
+
 %% Plotting
 
 x_earth = a_earth(tspan).*cosd(v_earth(tspan))/AU;
@@ -106,24 +114,51 @@ y_mars_final = a_mars(tspan(end)).*sind(v_mars(tspan(end)))/AU;
 
 sun_pos = [0,0];
 
-axis_num = 2;
+axis_lim = 2;
 
 figure(1)
 plot(sun_pos(1), sun_pos(2), 'ro');
-text(sun_pos(1), sun_pos(2) - axis_num*0.1, 'Sun');
+text(sun_pos(1), sun_pos(2) - axis_lim*0.1, 'Sun');
 hold on
 plot(x_earth,y_earth, '--k');
 plot(x_earth_final,y_earth_final, 'go');
-text(x_earth_final,y_earth_final - axis_num*0.1, 'Earth');
+text(x_earth_final,y_earth_final - axis_lim*0.1, 'Earth');
 plot(x_mars,y_mars, '--k');
 plot(x_mars_final,y_mars_final, 'o', 'Color', [0.8500 0.3250 0.0980]);
-text(x_mars_final,y_mars_final - axis_num*0.1, 'Mars');
-axis([-axis_num axis_num -axis_num axis_num]);
+text(x_mars_final,y_mars_final - axis_lim*0.1, 'Mars');
+axis([-axis_lim axis_lim -axis_lim axis_lim]);
 xlabel('x, AU');
 ylabel('y, AU');
 axis square
 
 %% Functions
+
+function [c,ceq] = traj(X)
+global x0 m0 
+lm = 1; %mass costate
+l = [G(1:6);lm]; %costate vector
+tt = G(7)*365; %transfer time in [days]
+Start = G(8); %start date
+XX = [x0;m0;l;lm]; %initial state vector for integration
+
+[t, X] = ode45(@INT,[0 tt],XX) % calculate trajectory
+xx = X(end,:)
+tf = ciel(t(end));
+af = xx(1)/(1-xx(2)^2 - xx(3)^2);
+ef = sqrt(xx(2)^2 + xx(3)^2);
+iif = (180/pi())*(2*inv(tan(sqrt(xx(4)^2 + xx(5)^2))));
+wf = (180/pi())*(inv(tan(xx(3)/xx(2)))-inv(tan(xx(5)/xx(4))));
+omegaf = (180/pi())*inv(tan(xx(5),xx(4)));
+thetaf = (180/pi())*xx(6)-(omegaf+wf);
+
+ceq(1) = af - a_mars(tf);
+ceq(2) = ef - e_mars(tf);
+ceq(3) = iif - i_mars(tf);
+ceq(4) = wf - w_mars(tf);
+ceq(5) = omegaf - omega_mars(tf);
+ceq(6) = thetaf - theta_mars(tf);
+
+end
 
 function f = contraints(p_0)
 
@@ -148,7 +183,7 @@ f(6) = L - omega + w + v;
 
 end
 
-function [state_dot] = sys(t, xp)
+function [state_dot] = sys(xp)
 
 global P_0 eta c
 
@@ -166,23 +201,23 @@ lam_m = xp(14);
 %   
 % D = [0 0 0 0 0 sqrt(mu*p)*(ww/p)^2]';
 
-[M,D,DM,DD] = MatSet(x);
+[M,D,DMDQ,DDDQ] = MatSet(x);
 
 alpha_vec = -(lam'*M)'/norm(lam'*M);
 
-dMdp = DM{1,1};
-dMdf = DM{2,1};
-dMdg = DM{3,1};
-dMdh = DM{4,1};
-dMdk = DM{5,1};
-dMdL = DM{6,1};
-
-dDdp = DD{1,1}';
-dDdf = DD{2,1}';
-dDdg = DD{3,1}';
-dDdh = DD{4,1}';
-dDdk = DD{5,1}';
-dDdL = DD{6,1}';
+% dMdp = DM{1,1};
+% dMdf = DM{2,1};
+% dMdg = DM{3,1};
+% dMdh = DM{4,1};
+% dMdk = DM{5,1};
+% dMdL = DM{6,1};
+% 
+% dDdp = DD{1,1}';
+% dDdf = DD{2,1}';
+% dDdg = DD{3,1}';
+% dDdh = DD{4,1}';
+% dDdk = DD{5,1}';
+% dDdL = DD{6,1}';
 
 % P = P_0/r^2;
 
@@ -190,17 +225,22 @@ T = (2*eta*P_0)/c;
 
 xdot = M*(T/m)*alpha_vec + D';
 mdot = -T/c;
-lam_pdot = -(lam'*dMdp*(T/m)*alpha_vec + lam'*dDdp);
-lam_fdot = -(lam'*dMdf*(T/m)*alpha_vec + lam'*dDdf);
-lam_gdot = -(lam'*dMdg*(T/m)*alpha_vec + lam'*dDdg);
-lam_hdot = -(lam'*dMdh*(T/m)*alpha_vec + lam'*dDdh);
-lam_kdot = -(lam'*dMdk*(T/m)*alpha_vec + lam'*dDdk);
-lam_ldot = -(lam'*dMdL*(T/m)*alpha_vec + lam'*dDdL);
+% lam_pdot = -(lam'*dMdp*(T/m)*alpha_vec + lam'*dDdp);
+% lam_fdot = -(lam'*dMdf*(T/m)*alpha_vec + lam'*dDdf);
+% lam_gdot = -(lam'*dMdg*(T/m)*alpha_vec + lam'*dDdg);
+% lam_hdot = -(lam'*dMdh*(T/m)*alpha_vec + lam'*dDdh);
+% lam_kdot = -(lam'*dMdk*(T/m)*alpha_vec + lam'*dDdk);
+% lam_ldot = -(lam'*dMdL*(T/m)*alpha_vec + lam'*dDdL);
+
+for i = 1:6
+    lam_xdot(i) = -(lam'*DMDQ(i:6:end,:)*(T/m)*alpha_vec + lam'*DDDQ(i:6:end)');
+end
+
 lam_mdot = -norm(lam'*M)*(T/m^2);
 
-lam_xdot = [lam_pdot; lam_fdot; lam_gdot; lam_hdot; lam_kdot; lam_ldot];
+% lam_xdot = [lam_pdot; lam_fdot; lam_gdot; lam_hdot; lam_kdot; lam_ldot];
 
-state_dot = [xdot;mdot;lam_xdot;lam_mdot];
+state_dot = [xdot;mdot;lam_xdot';lam_mdot];
 
 end
 
