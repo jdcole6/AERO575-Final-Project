@@ -39,13 +39,13 @@ end
 
 
 function dxdt = INT(t,xml) %Primary ODE solver with unknown costate values
-global DMDQ DDDQ
 x = xml(1:6); % state vector
 ll= xml(8:end-1); % costate vector
 Lm = xml(end); % mass costate
 m = xml(7); %mass
 P = p0; %assume constant power for now
 T = 2*eta*P/(g*Isp);
+[M,D,DMDQ,DDDQ] = MatSet(x);
 % determine derivatives
 dx = M*(T/m)*alpha+D;
 dm = -T/(g*Isp);
