@@ -1,4 +1,4 @@
-function [M,D,DM,DD] = MatSet(x)
+function [M,D,DMDQ,DDDQ] = MatSet(x)
 %% Declare Function Variables
 mu = 132712*10^6; % solar gravitational parameter [Km^3/s^2]
 syms p(t) f(t) g(t) h(t) k(t) L(t) M D
