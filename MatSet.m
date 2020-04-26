@@ -1,4 +1,5 @@
 function [M,D,DMDQ,DDDQ] = MatSet(x)
+
 %% Declare Function Variables
 mu = 132712*10^6; % solar gravitational parameter [Km^3/s^2]
 syms p(t) f(t) g(t) h(t) k(t) L(t) M D
@@ -47,6 +48,7 @@ end
 for kk = 1:6
         dD_dq{kk} = functionalDerivative(D(kk),[p,f,g,h,k,L]);
 end
+
 %% Establish Variable values
 p = x(1);
 f = x(2);
@@ -82,7 +84,7 @@ dDdh = DDDQ(4:6:end);
 dDdk = DDDQ(5:6:end);
 dDdL = DDDQ(6:6:end);
 
-%% recompose matrices and derivative
+%% Recompose matrices and derivative
 DM = {dMdp;dMdf;dMdg;dMdh;dMdk;dMdL};
 DD = {dDdp;dDdf;dDdg;dDdh;dDdk;dDdL};
 M = double(subs(M));
